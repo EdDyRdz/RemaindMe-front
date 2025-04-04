@@ -3,7 +3,7 @@ import { Outlet, Link } from 'react-router-dom';
 import { Layout, Menu } from 'antd';
 import {
   HomeOutlined,
-  CheckCircleOutlined,
+  /* CheckCircleOutlined, */
   SettingOutlined,
 } from '@ant-design/icons';
 import Navbar from '../components/Navbar';
@@ -25,10 +25,10 @@ const MainLayout = () => {
             <Menu.Item key="1" icon={<HomeOutlined />}>
               <Link to="/profile">Inicio</Link>
             </Menu.Item>
-            <Menu.Item key="2" icon={<CheckCircleOutlined />}>
+            {/* <Menu.Item key="2" icon={<CheckCircleOutlined />}>
               <Link to="/profile/date">Fecha y Hora</Link>
-            </Menu.Item>
-            <Menu.Item key="3" icon={<SettingOutlined/>}>
+            </Menu.Item> */}
+            <Menu.Item key="2" icon={<SettingOutlined/>}>
               <Link to="/profile/config">Configuración</Link>
             </Menu.Item>
           </Menu>

@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useContext } from 'react';
-import { 
-  Button, Typography, Layout, Modal, Form, Input, Select, DatePicker, message, Badge, List, Tag, Space, Spin, Row, Col, Card, Progress, Tabs, Popconfirm
+import {
+  Button, Typography, Layout, Modal, Form, Input, Select, DatePicker, message, Badge, List, Tag, Space, Spin, Row, Col, Card, Progress, Tabs, Popconfirm, notification
 } from 'antd';
-import {  PlusCircleOutlined,  ClockCircleOutlined,  CheckCircleOutlined,  PauseCircleOutlined,  EyeOutlined, FireOutlined, FlagOutlined, CalendarOutlined, UnorderedListOutlined, DeleteOutlined
+import {
+  PlusCircleOutlined, ClockCircleOutlined, CheckCircleOutlined, PauseCircleOutlined, EyeOutlined, FireOutlined, FlagOutlined, CalendarOutlined, UnorderedListOutlined, DeleteOutlined
 } from '@ant-design/icons';
 import { taskService } from '../../services/taskService';
 import { authService } from '../../services/authService';
@@ -33,7 +34,7 @@ const HomePage = () => {
         if (!token) {
           throw new Error("No autenticado");
         }
-        
+
         const tasksData = await taskService.getTasks();
         setTasks(tasksData);
 
@@ -49,7 +50,7 @@ const HomePage = () => {
         setLoading(false);
       }
     };
-    
+
     if (user) {
       fetchTasks();
     }
@@ -64,13 +65,71 @@ const HomePage = () => {
     setIsModalVisible(true);
   };
 
+  useEffect(() => {
+    if (!user) return;
+
+    let cleanupSSE;
+
+    const initializeReminders = async () => {
+      try {
+        // 1. Verificar si hay recordatorios activos primero
+        const activeReminders = await taskService.checkForActiveReminders();
+
+        // 2. Mostrar notificaciones pendientes
+        activeReminders.forEach(reminder => {
+          showReminderNotification(reminder);
+        });
+
+        // 3. Configurar SSE solo si hay recordatorios activos o próximos
+        if (activeReminders.length > 0 ||
+          tasks.some(t => t.remind_me && moment(t.remind_me).isAfter(moment()))) {
+          cleanupSSE = await taskService.setupSSEConnection(showReminderNotification);
+        }
+      } catch (error) {
+        console.error('Error initializing reminders:', error);
+      }
+    };
+
+    const showReminderNotification = (reminderData) => {
+      notification.info({
+        message: 'Recordatorio',
+        description: (
+          <div>
+            <p>{reminderData.message}</p>
+            <p>Hora: {moment(reminderData.reminderTime).format('DD/MM/YYYY HH:mm')}</p>
+            <Button
+              type="primary"
+              size="small"
+              onClick={() => {
+                const task = tasks.find(t => t._id === reminderData.taskId);
+                if (task) setSelectedTask(task);
+                notification.close(reminderData.taskId);
+              }}
+            >
+              Ver Tarea
+            </Button>
+          </div>
+        ),
+        key: reminderData.taskId,
+        duration: 0,
+        placement: 'bottomRight'
+      });
+    };
+
+    initializeReminders();
+
+    return () => {
+      if (cleanupSSE) cleanupSSE();
+    };
+  }, [user, tasks]);
+
   const handleCancel = () => setIsModalVisible(false);
 
   const handleOk = async () => {
     try {
       const values = await form.validateFields();
       setLoading(true);
-      
+
       const formattedValues = {
         ...values,
         dead_line: values.dead_line.toISOString(),
@@ -84,7 +143,7 @@ const HomePage = () => {
         dead_line: moment(data.task.dead_line),
         remind_me: data.task.remind_me ? moment(data.task.remind_me) : null
       };
-      
+
       setTasks([...tasks, newTask]);
       message.success("Tarea creada exitosamente");
       setIsModalVisible(false);
@@ -103,22 +162,34 @@ const HomePage = () => {
 
   const handleStatusChange = async (taskId, newStatus) => {
     try {
-      await taskService.updateTaskStatus(taskId, newStatus);
-      
-      const updatedTasks = tasks.map(t => 
+      setLoading(true);
+      // Actualizar primero el estado local para una respuesta más rápida
+      const updatedTasks = tasks.map(t =>
         t._id === taskId ? { ...t, status: newStatus } : t
       );
-      
       setTasks(updatedTasks);
+
+      // Luego hacer la llamada al API
+      await taskService.updateTaskStatus(taskId, newStatus);
+
       message.success("Estado de tarea actualizado");
     } catch (error) {
       console.error("Error al actualizar estado de la tarea:", error);
+
+      // Revertir el cambio si falla
+      const originalTasks = tasks.map(t =>
+        t._id === taskId ? { ...t, status: t.status } : t
+      );
+      setTasks(originalTasks);
+
       if (error.message.includes("401")) {
         message.error("Sesión expirada. Por favor, vuelve a iniciar sesión");
         logoutUser();
       } else {
         message.error("Error al actualizar el estado");
       }
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -127,15 +198,14 @@ const HomePage = () => {
       await taskService.deleteTask(taskId);
       const updatedTasks = tasks.filter(t => t._id !== taskId);
       setTasks(updatedTasks);
-      
-      if (selectedTask && selectedTask._id === taskId) {
+  
+      if (selectedTask?._id === taskId) {
         setSelectedTask(null);
       }
-      
-      message.success("Tarea eliminada exitosamente");
+      message.success("Tarea eliminada");
     } catch (error) {
-      console.error("Error al eliminar tarea:", error);
-      message.error("Error al eliminar la tarea");
+      console.error("Error al eliminar:", error);
+      message.error("No se pudo eliminar la tarea");
     }
   };
 
@@ -164,11 +234,11 @@ const HomePage = () => {
     return 1; // Baja
   };
 
-  const filteredTasks = isSearching 
-  ? searchResults 
-  : tasks.filter(task => {
+  const filteredTasks = isSearching
+    ? searchResults
+    : tasks.filter(task => {
       if (task.createdBy !== user?._id) return false;
-      
+
       switch (activeTab) {
         case 'active':
           return task.status !== 'Done';
@@ -184,9 +254,9 @@ const HomePage = () => {
   const taskStats = {
     total: tasks.filter(t => t.createdBy === user?._id).length,
     completed: tasks.filter(t => t.createdBy === user?._id && t.status === 'Done').length,
-    urgent: tasks.filter(t => 
-      t.createdBy === user?._id && 
-      t.status !== 'Done' && 
+    urgent: tasks.filter(t =>
+      t.createdBy === user?._id &&
+      t.status !== 'Done' &&
       getPriorityLevel(t.dead_line) >= 3
     ).length,
   };
@@ -208,12 +278,42 @@ const HomePage = () => {
                     </Text>
                   </Col>
                   <Col>
-                    <Button 
-                      type="primary" 
-                      icon={<PlusCircleOutlined />} 
+                    <Button
+                      type="primary"
+                      icon={<PlusCircleOutlined />}
                       onClick={showModal}
                     >
                       Nueva Tarea
+                    </Button>
+                    <Button
+                      type="primary"
+                      icon={<FireOutlined />}
+                      onClick={() => {
+                        notification.info({
+                          message: 'Recordatorio de Prueba',
+                          description: (
+                            <div>
+                              <p>Esta es una notificación de prueba para verificar el funcionamiento</p>
+                              <p>Hora: {moment().format('DD/MM/YYYY HH:mm')}</p>
+                              <Button
+                                type="primary"
+                                size="small"
+                                onClick={() => {
+                                  notification.destroy();
+                                  setSelectedTask(tasks[0]); // Selecciona la primera tarea como ejemplo
+                                }}
+                              >
+                                Ver Tarea de Ejemplo
+                              </Button>
+                            </div>
+                          ),
+                          key: 'test-notification',
+                          duration: 0, // No se cierra automáticamente
+                          placement: 'bottomRight'
+                        });
+                      }}
+                    >
+                      Probar Notificación
                     </Button>
                   </Col>
                 </Row>
@@ -226,8 +326,8 @@ const HomePage = () => {
                   <Card>
                     <Space direction="vertical" size="small" style={{ width: '100%' }}>
                       <Text strong>Total de tareas</Text>
-                      <Progress 
-                        percent={taskStats.total > 0 ? Math.round((taskStats.completed / taskStats.total) * 100) : 0} 
+                      <Progress
+                        percent={taskStats.total > 0 ? Math.round((taskStats.completed / taskStats.total) * 100) : 0}
                         status={taskStats.completed === taskStats.total && taskStats.total > 0 ? 'success' : 'active'}
                       />
                       <Row justify="space-between">
@@ -246,14 +346,14 @@ const HomePage = () => {
                   <Card>
                     <Space direction="vertical" size="small" style={{ width: '100%' }}>
                       <Text strong>Tareas urgentes</Text>
-                      <Progress 
-                        percent={taskStats.urgent > 0 ? 100 : 0} 
+                      <Progress
+                        percent={taskStats.urgent > 0 ? 100 : 0}
                         status={taskStats.urgent > 0 ? 'exception' : 'success'}
                         format={() => taskStats.urgent}
                       />
                       <Text type="secondary">
-                        {taskStats.urgent > 0 
-                          ? `${taskStats.urgent} tareas con alta prioridad` 
+                        {taskStats.urgent > 0
+                          ? `${taskStats.urgent} tareas con alta prioridad`
                           : 'No hay tareas urgentes'}
                       </Text>
                     </Space>
@@ -265,9 +365,14 @@ const HomePage = () => {
                     <Space direction="vertical" size="small" style={{ width: '100%' }}>
                       <Text strong>Próximas fechas</Text>
                       {tasks
-                        .filter(t => t.createdBy === user?._id && t.dead_line && !t.dead_line.isBefore(moment()))
+                        .filter(t =>
+                          t.createdBy === user?._id &&
+                          t.dead_line &&
+                          !t.dead_line.isBefore(moment()) &&
+                          t.status !== "Done" // ✅ Excluir tareas finalizadas
+                        )
                         .sort((a, b) => a.dead_line - b.dead_line)
-                        .slice(0, 3)
+                        .slice(0, 2)
                         .map(task => (
                           <div key={task._id}>
                             <Text ellipsis style={{ display: 'block' }}>
@@ -276,9 +381,14 @@ const HomePage = () => {
                             </Text>
                           </div>
                         ))}
-                      {tasks.filter(t => t.createdBy === user?._id && t.dead_line && !t.dead_line.isBefore(moment())).length === 0 && (
-                        <Text type="secondary">No hay fechas próximas</Text>
-                      )}
+                      {tasks.filter(t =>
+                        t.createdBy === user?._id &&
+                        t.dead_line &&
+                        !t.dead_line.isBefore(moment()) &&
+                        t.status !== "Done"
+                      ).length === 0 && (
+                          <Text type="secondary">No hay fechas próximas</Text>
+                        )}
                     </Space>
                   </Card>
                 </Col>
@@ -287,8 +397,8 @@ const HomePage = () => {
 
             <Col span={24}>
               <Card>
-                <Tabs 
-                  activeKey={activeTab} 
+                <Tabs
+                  activeKey={activeTab}
                   onChange={setActiveTab}
                   tabBarExtraContent={
                     <Text strong style={{ marginRight: 16 }}>
@@ -296,31 +406,31 @@ const HomePage = () => {
                     </Text>
                   }
                 >
-                  <TabPane 
+                  <TabPane
                     tab={
                       <span>
                         <UnorderedListOutlined />
                         Activas
                       </span>
-                    } 
+                    }
                     key="active"
                   />
-                  <TabPane 
+                  <TabPane
                     tab={
                       <span>
                         <CheckCircleOutlined />
                         Completadas
                       </span>
-                    } 
+                    }
                     key="completed"
                   />
-                  <TabPane 
+                  <TabPane
                     tab={
                       <span>
                         <FireOutlined />
                         Urgentes
                       </span>
-                    } 
+                    }
                     key="urgent"
                   />
                 </Tabs>
@@ -335,7 +445,7 @@ const HomePage = () => {
                     dataSource={filteredTasks}
                     renderItem={task => (
                       <List.Item
-                        style={{ 
+                        style={{
                           padding: '16px',
                           borderLeft: `4px solid ${statusData[task.status]?.color || 'gray'}`,
                           marginBottom: '16px',
@@ -351,13 +461,17 @@ const HomePage = () => {
                         onClick={() => setSelectedTask(task)}
                         actions={[
                           <Select
-                            defaultValue={task.status}
+                            value={task.status}  // Cambiado de defaultValue a value
                             style={{ width: 140 }}
                             onChange={(value) => handleStatusChange(task._id, value)}
+                            disabled={loading}
                           >
-                            {Object.keys(statusData).map(status => (
-                              <Select.Option key={status} value={status}>
-                                {statusData[status].text}
+                            {Object.entries(statusData).map(([statusKey, statusInfo]) => (
+                              <Select.Option key={statusKey} value={statusKey}>
+                                <Space>
+                                  {statusInfo.icon}
+                                  {statusInfo.text}
+                                </Space>
                               </Select.Option>
                             ))}
                           </Select>,
@@ -367,8 +481,8 @@ const HomePage = () => {
                             okText="Sí"
                             cancelText="No"
                           >
-                            <Button 
-                              type="text" 
+                            <Button
+                              type="text"
                               danger
                               icon={<DeleteOutlined />}
                               onClick={(e) => e.stopPropagation()}
@@ -380,16 +494,16 @@ const HomePage = () => {
                       >
                         <List.Item.Meta
                           avatar={
-                            <Badge 
-                              color={statusData[task.status]?.color || 'gray'} 
+                            <Badge
+                              color={statusData[task.status]?.color || 'gray'}
                               icon={statusData[task.status]?.icon}
                               style={{ marginTop: 6 }}
                             />
                           }
                           title={
-                            <Text 
-                              strong 
-                              style={{ 
+                            <Text
+                              strong
+                              style={{
                                 fontSize: '16px',
                                 color: statusData[task.status]?.color || 'inherit'
                               }}
@@ -404,8 +518,8 @@ const HomePage = () => {
                               </Text>
                               <Space size={8}>
                                 <Tag icon={<FlagOutlined />} color={getPriorityColor(task.dead_line)}>
-                                  {task.dead_line ? 
-                                    `${moment(task.dead_line).fromNow()} (${moment(task.dead_line).format('DD/MM/YYYY')})` : 
+                                  {task.dead_line ?
+                                    `${moment(task.dead_line).fromNow()} (${moment(task.dead_line).format('DD/MM/YYYY')})` :
                                     'Sin fecha'}
                                 </Tag>
                                 <Tag color="geekblue">{task.category}</Tag>
@@ -426,10 +540,10 @@ const HomePage = () => {
             </Col>
           </Row>
 
-          <Modal 
-            title="Crear Nueva Tarea" 
-            visible={isModalVisible} 
-            onCancel={handleCancel} 
+          <Modal
+            title="Crear Nueva Tarea"
+            visible={isModalVisible}
+            onCancel={handleCancel}
             onOk={handleOk}
             confirmLoading={loading}
             width={700}
@@ -439,85 +553,130 @@ const HomePage = () => {
             <Form form={form} layout="vertical">
               <Row gutter={16}>
                 <Col span={12}>
-                  <Form.Item 
-                    name="nametask" 
-                    label="Nombre" 
+                  <Form.Item
+                    name="nametask"
+                    label="Nombre"
                     rules={[{ required: true, message: "Nombre requerido" }]}
                   >
-                    <Input placeholder="Nombre de la tarea" />
+                    <Input placeholder="Nombre de la tarea" autoComplete='off' />
                   </Form.Item>
                 </Col>
                 <Col span={12}>
-                  <Form.Item 
-                    name="category" 
-                    label="Categoría" 
+                  <Form.Item
+                    name="category"
+                    label="Categoría"
                     initialValue="Work"
                     rules={[{ required: true }]}
                   >
-                  <Select>
-                    <Select.Option value="Work">Trabajo</Select.Option>
-                    <Select.Option value="Study">Estudio</Select.Option>
-                    <Select.Option value="Personal">Personal</Select.Option>
-                  </Select>
-                </Form.Item>
-              </Col>
-            </Row>
-            
-            <Form.Item 
-              name="description" 
-              label="Descripción" 
-              rules={[{ required: true }]}
-            >
-              <Input.TextArea rows={3} placeholder="Descripción detallada" />
-            </Form.Item>
-            
-            <Row gutter={16}>
-              <Col span={12}>
-                <Form.Item 
-                  name="dead_line" 
-                  label="Fecha Límite" 
-                  rules={[{ required: true }]}
-                >
-                  <DatePicker 
-                    showTime 
-                    format="YYYY-MM-DD HH:mm"
-                    style={{ width: '100%' }}
-                    disabledDate={(current) => current && current < moment().startOf('day')}
-                  />
-                </Form.Item>
-              </Col>
-              <Col span={12}>
-                <Form.Item 
-                  name="remind_me" 
-                  label="Recordatorio"
-                >
-                  <DatePicker 
-                    showTime 
-                    format="YYYY-MM-DD HH:mm" 
-                    style={{ width: '100%' }} 
-                  />
-                </Form.Item>
-              </Col>
-            </Row>
-            
-            <Form.Item 
-              name="status" 
-              label="Estado" 
-              initialValue="In Progress"
-              rules={[{ required: true }]}
-            >
-              <Select>
-                <Select.Option value="In Progress">En progreso</Select.Option>
-                <Select.Option value="Done">Finalizada</Select.Option>
-                <Select.Option value="Paused">Pausada</Select.Option>
-                <Select.Option value="Revision">En revisión</Select.Option>
-              </Select>
-            </Form.Item>
-          </Form>
-        </Modal>
-      </Content>
-    </FooterLayout>
-  </NavbarLayout>
+                    <Select>
+                      <Select.Option value="Work">Trabajo</Select.Option>
+                      <Select.Option value="Study">Estudio</Select.Option>
+                      <Select.Option value="Personal">Personal</Select.Option>
+                    </Select>
+                  </Form.Item>
+                </Col>
+              </Row>
+
+              <Form.Item
+                name="description"
+                label="Descripción"
+                rules={[{ required: true }]}
+              >
+                <Input.TextArea rows={3} placeholder="Descripción detallada" />
+              </Form.Item>
+
+              <Row gutter={16}>
+                <Col span={12}>
+                  <Form.Item
+                    help={form.getFieldValue('dead_line')
+                      ? `El recordatorio debe ser antes de ${moment(form.getFieldValue('dead_line')).format('LLL')}`
+                      : 'Selecciona primero la fecha límite'}
+                    name="dead_line"
+                    label="Fecha Límite"
+                    rules={[{ required: true }]}
+                  >
+
+                    <DatePicker
+                      showTime
+                      format="YYYY-MM-DD HH:mm"
+                      style={{ width: '100%' }}
+                      disabledDate={(current) => current && current < moment().startOf('day')}
+                      onChange={() => {
+                        // Resetear el recordatorio si ya no es válido
+                        const deadLine = form.getFieldValue('dead_line');
+                        const remindMe = form.getFieldValue('remind_me');
+
+                        if (remindMe && deadLine && moment(remindMe) > moment(deadLine)) {
+                          form.setFieldsValue({ remind_me: null });
+                        }
+                      }}
+                    />
+                  </Form.Item>
+                </Col>
+                <Col span={12}>
+                  <Form.Item
+                    name="remind_me"
+                    label="Recordatorio"
+                    dependencies={['dead_line']}
+                    rules={[
+                      ({ getFieldValue }) => ({
+                        validator(_, value) {
+                          if (!value) return Promise.resolve();
+                          const deadLine = getFieldValue('dead_line');
+                          if (deadLine && moment(value).isAfter(moment(deadLine))) {
+                            return Promise.reject('El recordatorio debe ser antes de la fecha límite');
+                          }
+                          return Promise.resolve();
+                        },
+                      }),
+                    ]}
+                  >
+                    <DatePicker
+                      showTime
+                      format="YYYY-MM-DD HH:mm"
+                      style={{ width: '100%' }}
+                      disabledDate={(current) => current && current < moment().startOf('day')}
+                      disabledTime={(current) => {
+                        if (!current) return {};
+                        if (current.isSame(moment(), 'day')) {
+                          const now = moment();
+                          return {
+                            disabledHours: () => Array.from({ length: 24 }, (_, i) => i)
+                              .filter(hour => hour < now.hour()),
+                            disabledMinutes: (selectedHour) => {
+                              if (selectedHour === now.hour()) {
+                                return Array.from({ length: 60 }, (_, i) => i)
+                                  .filter(minute => minute < now.minute());
+                              }
+                              return [];
+                            }
+                          };
+                        }
+                        return {};
+                      }}
+                    />
+                  </Form.Item>
+                </Col>
+              </Row>
+
+              <Form.Item
+                name="status"
+                label="Estado"
+                initialValue="In Progress"
+                rules={[{ required: true }]}
+              >
+                <Select>
+                  <Select.Option value="In Progress">En progreso</Select.Option>
+                  <Select.Option value="Done">Finalizada</Select.Option>
+                  <Select.Option value="Paused">Pausada</Select.Option>
+                  <Select.Option value="Revision">En revisión</Select.Option>
+                </Select>
+              </Form.Item>
+            </Form>
+          </Modal>
+        </Content>
+      </FooterLayout>
+    </NavbarLayout>
   );
 };
 

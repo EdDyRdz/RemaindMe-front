@@ -17,7 +17,7 @@ const LoginPage = () => {
         setLoading(true);
         try {
             const response = await loginUser(values.email, values.password);
-            
+
             if (response.mfaRequired) {
                 setLoginData({
                     email: values.email,
@@ -38,7 +38,7 @@ const LoginPage = () => {
         setLoading(true);
         try {
             const response = await verifyMFA(loginData.tempToken, values.code);
-            
+
             if (response.token) {
                 localStorage.setItem('token', response.token);
                 message.success('¡Inicio de sesión exitoso!');
@@ -82,10 +82,10 @@ const LoginPage = () => {
                                 <Input.Password placeholder="Contraseña" />
                             </Form.Item>
                             <Form.Item>
-                                <Button 
-                                    type="primary" 
-                                    htmlType="submit" 
-                                    loading={loading} 
+                                <Button
+                                    type="primary"
+                                    htmlType="submit"
+                                    loading={loading}
                                     className="login-button"
                                     block
                                 >
@@ -110,7 +110,7 @@ const LoginPage = () => {
                         <Text strong style={{ display: 'block', margin: '10px 0 20px' }}>
                             {loginData.email}
                         </Text>
-                        
+
                         <Form onFinish={handleMFAVerify} layout="vertical">
                             <Form.Item
                                 name="code"
@@ -119,25 +119,25 @@ const LoginPage = () => {
                                     { pattern: /^\d{6}$/, message: 'El código debe tener 6 dígitos' }
                                 ]}
                             >
-                                <Input 
-                                    placeholder="Código de 6 dígitos" 
+                                <Input
+                                    placeholder="Código de 6 dígitos"
                                     maxLength={6}
                                     style={{ letterSpacing: '2px', textAlign: 'center' }}
                                     autoComplete='off'
                                 />
                             </Form.Item>
                             <Form.Item>
-                                <Button 
-                                    type="primary" 
-                                    htmlType="submit" 
+                                <Button
+                                    type="primary"
+                                    htmlType="submit"
                                     loading={loading}
                                     className="login-button"
                                     block
                                 >
                                     Verificar y Continuar
                                 </Button>
-                                <Button 
-                                    type="link" 
+                                <Button
+                                    type="link"
                                     onClick={() => setStep(1)}
                                     block
                                     style={{ marginTop: '10px' }}
