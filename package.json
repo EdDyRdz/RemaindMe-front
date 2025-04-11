@@ -8,6 +8,7 @@
     "axios": "^1.7.9",
     "cra-template": "1.2.0",
     "font-awesome": "^4.7.0",
+    "googleapis": "^148.0.0",
     "jsonwebtoken": "^9.0.2",
     "moment": "^2.30.1",
     "qrcode": "^1.5.4",

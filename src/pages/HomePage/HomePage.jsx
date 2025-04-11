@@ -1,9 +1,11 @@
 import React, { useState, useEffect, useContext } from 'react';
 import {
-  Button, Typography, Layout, Modal, Form, Input, Select, DatePicker, message, Badge, List, Tag, Space, Spin, Row, Col, Card, Progress, Tabs, Popconfirm, notification
+  Button, Typography, Layout, Modal, Form, Input, Select, DatePicker, message, List, Tag, Space, Spin, 
+  Row, Col, Card, Progress, Tabs, Popconfirm, notification
 } from 'antd';
 import {
-  PlusCircleOutlined, ClockCircleOutlined, CheckCircleOutlined, PauseCircleOutlined, EyeOutlined, FireOutlined, FlagOutlined, CalendarOutlined, UnorderedListOutlined, DeleteOutlined
+  PlusCircleOutlined, ClockCircleOutlined, CheckCircleOutlined, PauseCircleOutlined, EyeOutlined, FireOutlined, 
+  CalendarOutlined, UnorderedListOutlined, DeleteOutlined
 } from '@ant-design/icons';
 import { taskService } from '../../services/taskService';
 import { authService } from '../../services/authService';
@@ -55,99 +57,94 @@ const HomePage = () => {
     }
   }, [user, logoutUser]);
 
-useEffect(() => {
-  if (!user) return;
+  useEffect(() => {
+    if (!user) return;
 
-  const reminderCache = new Map();
-  let pollingInterval;
+    const reminderCache = new Map();
+    let pollingInterval;
 
-  const checkReminders = async () => {
-    try {
-      const now = moment(); // Usar moment.js para manejo consistente de tiempo
-      const activeReminders = await taskService.checkForActiveReminders();
+    const checkReminders = async () => {
+      try {
+        const now = moment();
+        const activeReminders = await taskService.checkForActiveReminders();
 
-      // Verificar tareas completadas
-      tasks.forEach(task => {
-        if (task.status === 'Done' && reminderCache.has(task._id)) {
-          const cached = reminderCache.get(task._id);
-          notification.destroy(cached.notificationKey);
-          reminderCache.delete(task._id);
-        }
-      });
-
-      // Procesar recordatorios
-      activeReminders.forEach(reminder => {
-        const cached = reminderCache.get(reminder.taskId);
-        const task = tasks.find(t => t._id === reminder.taskId);
-
-        if (!task || task.status === 'Done') {
-          if (cached) {
+        tasks.forEach(task => {
+          if (task.status === 'Done' && reminderCache.has(task._id)) {
+            const cached = reminderCache.get(task._id);
             notification.destroy(cached.notificationKey);
-            reminderCache.delete(reminder.taskId);
+            reminderCache.delete(task._id);
           }
-          return;
-        }
+        });
 
-        // Calcular diferencia exacta
-        const reminderTime = moment(reminder.reminderTime);
-        const diffSeconds = reminderTime.diff(now, 'seconds');
+        activeReminders.forEach(reminder => {
+          const cached = reminderCache.get(reminder.taskId);
+          const task = tasks.find(t => t._id === reminder.taskId);
 
-        // Mostrar notificación exactamente en el momento programado (±5 segundos)
-        if (diffSeconds >= 0 && diffSeconds <= 5) {
-          if (cached) {
-            notification.destroy(cached.notificationKey);
+          if (!task || task.status === 'Done') {
+            if (cached) {
+              notification.destroy(cached.notificationKey);
+              reminderCache.delete(reminder.taskId);
+            }
+            return;
           }
 
-          const notificationKey = `reminder-${reminder.taskId}-${now.valueOf()}`;
-          showReminderNotification(reminder, notificationKey);
-          
-          reminderCache.set(reminder.taskId, {
-            lastNotifiedAt: now.valueOf(),
-            notificationKey
-          });
-        }
-      });
+          const reminderTime = moment(reminder.reminderTime);
+          const diffSeconds = reminderTime.diff(now, 'seconds');
 
-    } catch (error) {
-      console.error('Error checking reminders:', error);
-    }
-  };
+          if (diffSeconds >= 0 && diffSeconds <= 5) {
+            if (cached) {
+              notification.destroy(cached.notificationKey);
+            }
 
-  // Mostrar notificación
-  const showReminderNotification = (reminderData, notificationKey) => {
-    const task = tasks.find(t => t._id === reminderData.taskId);
-    if (!task) return;
+            const notificationKey = `reminder-${reminder.taskId}-${now.valueOf()}`;
+            showReminderNotification(reminder, notificationKey);
 
-    const reminderTime = moment(reminderData.reminderTime);
-    const formattedTime = reminderTime.format('DD/MM/YYYY HH:mm:ss');
+            reminderCache.set(reminder.taskId, {
+              lastNotifiedAt: now.valueOf(),
+              notificationKey
+            });
+          }
+        });
 
-    notification.open({
-      message: 'Recordatorio',
-      description: (
-        <div>
-          <p>{reminderData.message}</p>
-          <p>Hora exacta: {formattedTime}</p>
-          <p>Hora actual: {moment().format('HH:mm:ss')}</p>
-        </div>
-      ),
-      key: notificationKey,
-      duration: 0,
-      placement: 'bottomRight',
-      onClick: () => {
-        setSelectedTask(task);
-        notification.destroy(notificationKey);
+      } catch (error) {
+        console.error('Error checking reminders:', error);
       }
-    });
-  };
+    };
 
-  pollingInterval = setInterval(checkReminders, 5000);
-  checkReminders();
+    const showReminderNotification = (reminderData, notificationKey) => {
+      const task = tasks.find(t => t._id === reminderData.taskId);
+      if (!task) return;
 
-  return () => {
-    clearInterval(pollingInterval);
-    notification.destroy();
-  };
-}, [user, tasks]);
+      const reminderTime = moment(reminderData.reminderTime);
+      const formattedTime = reminderTime.format('DD/MM/YYYY HH:mm:ss');
+
+      notification.open({
+        message: 'Recordatorio',
+        description: (
+          <div>
+            <p>{reminderData.message}</p>
+            <p>Hora exacta: {formattedTime}</p>
+            <p>Hora actual: {moment().format('HH:mm:ss')}</p>
+          </div>
+        ),
+        key: notificationKey,
+        duration: 0,
+        placement: 'bottomRight',
+        onClick: () => {
+          setSelectedTask(task);
+          notification.destroy(notificationKey);
+        }
+      });
+    };
+
+    pollingInterval = setInterval(checkReminders, 5000);
+    checkReminders();
+
+    return () => {
+      clearInterval(pollingInterval);
+      notification.destroy();
+    };
+  }, [user, tasks]);
 
   const showModal = () => {
     if (!user) {
@@ -202,13 +199,13 @@ useEffect(() => {
         t._id === taskId ? { ...t, status: newStatus } : t
       );
       setTasks(updatedTasks);
-  
+
       await taskService.updateTaskStatus(taskId, newStatus);
-  
+
       if (newStatus === 'Done') {
         notification.destroy(`reminder-${taskId}`);
       }
-  
+
       message.success("Estado de tarea actualizado");
     } catch (error) {
       console.error("Error al actualizar estado de la tarea:", error);
@@ -234,10 +231,9 @@ useEffect(() => {
       await taskService.deleteTask(taskId);
       const updatedTasks = tasks.filter(t => t._id !== taskId);
       setTasks(updatedTasks);
-  
-      // Cerrar notificación si existe
+
       notification.destroy(`reminder-${taskId}`);
-  
+
       if (selectedTask?._id === taskId) {
         setSelectedTask(null);
       }
@@ -267,10 +263,10 @@ useEffect(() => {
   const getPriorityLevel = (deadline) => {
     if (!deadline) return 0;
     const daysLeft = moment(deadline).diff(moment(), 'days');
-    if (daysLeft < 0) return 4; // Urgente (vencida)
-    if (daysLeft <= 2) return 3; // Alta
-    if (daysLeft <= 5) return 2; // Media
-    return 1; // Baja
+    if (daysLeft < 0) return 4;
+    if (daysLeft <= 2) return 3;
+    if (daysLeft <= 5) return 2;
+    return 1;
   };
 
   const filteredTasks = isSearching
@@ -298,6 +294,181 @@ useEffect(() => {
       t.status !== 'Done' &&
       getPriorityLevel(t.dead_line) >= 3
     ).length,
+  };
+
+/*   const groupTasksByDate = (tasks) => {
+    const grouped = {};
+    
+    tasks.forEach(task => {
+      const dateKey = task.dead_line ? moment(task.dead_line).format('DD/MM/YYYY') : 'Sin fecha';
+      
+      if (!grouped[dateKey]) {
+        grouped[dateKey] = [];
+      }
+      
+      grouped[dateKey].push(task);
+    });
+    
+    return grouped;
+  }; */
+
+  const renderTaskCards = () => {
+    // Agrupar tareas por fecha
+    const groupedTasks = {};
+    
+    filteredTasks.forEach(task => {
+      const dateKey = task.dead_line ? moment(task.dead_line).format('DD/MM/YYYY') : 'Sin fecha';
+      
+      if (!groupedTasks[dateKey]) {
+        groupedTasks[dateKey] = [];
+      }
+      
+      groupedTasks[dateKey].push(task);
+    });
+  
+    // Ordenar las fechas
+    const dates = Object.keys(groupedTasks).sort((a, b) => {
+      if (a === 'Sin fecha') return 1;
+      if (b === 'Sin fecha') return -1;
+      return moment(a, 'DD/MM/YYYY').diff(moment(b, 'DD/MM/YYYY'));
+    });
+  
+    // Ordenar tareas por hora dentro de cada fecha
+    dates.forEach(date => {
+      groupedTasks[date].sort((a, b) => {
+        if (!a.dead_line) return 1;
+        if (!b.dead_line) return -1;
+        return moment(a.dead_line).diff(moment(b.dead_line));
+      });
+    });
+  
+    return (
+      <div style={{ overflowX: 'auto', paddingBottom: '16px' }}>
+        <Row gutter={[16, 16]} style={{ flexWrap: 'nowrap' }}>
+          {dates.map(date => (
+            <Col key={date} style={{ minWidth: '350px' }}> {/* Aumenté el ancho mínimo */}
+              <Card
+                title={
+                  <Space>
+                    <CalendarOutlined />
+                    <Text strong>{date}</Text>
+                    <Tag>{groupedTasks[date].length}</Tag>
+                  </Space>
+                }
+                style={{ 
+                  height: '100%',
+                  boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
+                }}
+                headStyle={{
+                  backgroundColor: '#fafafa',
+                  borderBottom: '1px solid #f0f0f0'
+                }}
+              >
+                <List
+                  dataSource={groupedTasks[date]}
+                  renderItem={task => (
+                    <List.Item
+                      style={{
+                        padding: '16px',
+                        borderLeft: `4px solid ${statusData[task.status]?.color || 'gray'}`,
+                        marginBottom: '12px',
+                        backgroundColor: '#fff',
+                        borderRadius: '6px',
+                        boxShadow: '0 1px 2px rgba(0,0,0,0.08)'
+                      }}
+                      onClick={() => setSelectedTask(task)}
+                    >
+                      <div style={{ width: '100%' }}>
+                        {/* Primera fila: Hora y título */}
+                        <Row justify="space-between" align="middle" style={{ marginBottom: '8px' }}>
+                          <Col>
+                            <Text strong style={{ fontSize: '15px' }}>
+                              {task.nametask}
+                            </Text>
+                          </Col>
+                          <Col>
+                            {task.dead_line && (
+                              <Tag color="blue">
+                                <ClockCircleOutlined style={{ marginRight: '4px' }} />
+                                {moment(task.dead_line).format('HH:mm')}
+                              </Tag>
+                            )}
+                          </Col>
+                        </Row>
+                        
+                        {/* Segunda fila: Descripción */}
+                        <Row style={{ marginBottom: '12px' }}>
+                          <Col span={24}>
+                            <Text 
+                              type="secondary" 
+                              style={{ 
+                                fontSize: '13px',
+                                display: 'block',
+                                whiteSpace: 'pre-line'
+                              }}
+                            >
+                              {task.description}
+                            </Text>
+                          </Col>
+                        </Row>
+                        
+                        {/* Tercera fila: Tags y acciones */}
+                        <Row justify="space-between" align="middle">
+                          <Col>
+                            <Space size={4} wrap>
+                              <Tag color={getPriorityColor(task.dead_line)}>
+                                {task.category}
+                              </Tag>
+                              {task.remind_me && (
+                                <Tag icon={<ClockCircleOutlined />} color="purple">
+                                  Recordar: {moment(task.remind_me).format('HH:mm')}
+                                </Tag>
+                              )}
+                            </Space>
+                          </Col>
+                          <Col>
+                            <Space>
+                              <Select
+                                value={task.status}
+                                size="small"
+                                style={{ width: '120px' }}
+                                onChange={(value) => handleStatusChange(task._id, value)}
+                                disabled={loading}
+                              >
+                                {Object.entries(statusData).map(([statusKey, statusInfo]) => (
+                                  <Select.Option key={statusKey} value={statusKey}>
+                                    <Space>
+                                      {statusInfo.icon}
+                                      {statusInfo.text}
+                                    </Space>
+                                  </Select.Option>
+                                ))}
+                              </Select>
+                              <Popconfirm
+                                title="¿Eliminar esta tarea?"
+                                onConfirm={() => handleDeleteTask(task._id)}
+                              >
+                                <Button
+                                  type="text"
+                                  danger
+                                  icon={<DeleteOutlined />}
+                                  size="small"
+                                  onClick={(e) => e.stopPropagation()}
+                                />
+                              </Popconfirm>
+                            </Space>
+                          </Col>
+                        </Row>
+                      </div>
+                    </List.Item>
+                  )}
+                />
+              </Card>
+            </Col>
+          ))}
+        </Row>
+      </div>
+    );
   };
 
   return (
@@ -449,101 +620,7 @@ useEffect(() => {
                     <Spin size="large" />
                   </div>
                 ) : (
-                  <List
-                    itemLayout="vertical"
-                    dataSource={filteredTasks}
-                    renderItem={task => (
-                      <List.Item
-                        style={{
-                          padding: '16px',
-                          borderLeft: `4px solid ${statusData[task.status]?.color || 'gray'}`,
-                          marginBottom: '16px',
-                          borderRadius: '4px',
-                          backgroundColor: '#fff',
-                          boxShadow: '0 1px 2px rgba(0,0,0,0.1)',
-                          cursor: 'pointer',
-                          transition: 'all 0.3s',
-                          ':hover': {
-                            boxShadow: '0 4px 8px rgba(0,0,0,0.1)'
-                          }
-                        }}
-                        onClick={() => setSelectedTask(task)}
-                        actions={[
-                          <Select
-                            value={task.status}
-                            style={{ width: 140 }}
-                            onChange={(value) => handleStatusChange(task._id, value)}
-                            disabled={loading}
-                          >
-                            {Object.entries(statusData).map(([statusKey, statusInfo]) => (
-                              <Select.Option key={statusKey} value={statusKey}>
-                                <Space>
-                                  {statusInfo.icon}
-                                  {statusInfo.text}
-                                </Space>
-                              </Select.Option>
-                            ))}
-                          </Select>,
-                          <Popconfirm
-                            title="¿Estás seguro de eliminar esta tarea?"
-                            onConfirm={() => handleDeleteTask(task._id)}
-                            okText="Sí"
-                            cancelText="No"
-                          >
-                            <Button
-                              type="text"
-                              danger
-                              icon={<DeleteOutlined />}
-                              onClick={(e) => e.stopPropagation()}
-                            >
-                              Eliminar
-                            </Button>
-                          </Popconfirm>
-                        ]}
-                      >
-                        <List.Item.Meta
-                          avatar={
-                            <Badge
-                              color={statusData[task.status]?.color || 'gray'}
-                              icon={statusData[task.status]?.icon}
-                              style={{ marginTop: 6 }}
-                            />
-                          }
-                          title={
-                            <Text
-                              strong
-                              style={{
-                                fontSize: '16px',
-                                color: statusData[task.status]?.color || 'inherit'
-                              }}
-                            >
-                              {task.nametask}
-                            </Text>
-                          }
-                          description={
-                            <Space direction="vertical" size={4}>
-                              <Text type="secondary" style={{ fontSize: '14px' }}>
-                                {task.description}
-                              </Text>
-                              <Space size={8}>
-                                <Tag icon={<FlagOutlined />} color={getPriorityColor(task.dead_line)}>
-                                  {task.dead_line ?
-                                    `${moment(task.dead_line).fromNow()} (${moment(task.dead_line).format('DD/MM/YYYY')})` :
-                                    'Sin fecha'}
-                                </Tag>
-                                <Tag color="geekblue">{task.category}</Tag>
-                                {task.remind_me && (
-                                  <Tag icon={<ClockCircleOutlined />} color="purple">
-                                    Recordar: {moment(task.remind_me).format('DD/MM HH:mm')}
-                                  </Tag>
-                                )}
-                              </Space>
-                            </Space>
-                          }
-                        />
-                      </List.Item>
-                    )}
-                  />
+                  renderTaskCards()
                 )}
               </Card>
             </Col>
