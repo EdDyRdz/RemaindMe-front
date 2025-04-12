@@ -1,6 +1,6 @@
 import axios from "axios";
 
-const API_BASE_URL = "https://remaindme-back.onrender.com/:10000/api";
+const API_BASE_URL = "https://remaindme-back.onrender.com/api";
 
 const api = axios.create({
   baseURL: API_BASE_URL,
