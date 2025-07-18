@@ -59,7 +59,7 @@ Aunque ofrece ventajas significativas, RemindMe:
 ---
 
 ## 📸 Capturas de Pantalla 
-![Demo](https://imgur.com/a/RRsfjLJ)
+![Demo](https://imgur.com/enZsEtM)
 ---
 
 ## Roadmap Futuro
