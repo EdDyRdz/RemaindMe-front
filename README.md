@@ -1,70 +1,47 @@
-# Getting Started with Create React App
+RemindMe
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+Introducción
+RemindMe es una aplicación diseñada para mejorar la organización personal mediante recordatorios personalizables y notificaciones exactas al momento programado por el usuario. Está desarrollada para funcionar de manera independiente, ofreciendo mayor flexibilidad y seguridad en comparación con otras plataformas.
 
-## Available Scripts
+Desarrollo Técnico
+Autenticación MFA
+La autenticación multifactor (MFA) se utiliza para asegurar el acceso a la aplicación, proporcionando una capa adicional de seguridad.
 
-In the project directory, you can run:
+Base de Datos
+La aplicación utiliza MongoDB para gestionar las tareas y usuarios, permitiendo escalabilidad y flexibilidad en el esquema de datos.
 
-### `npm start`
+Implementación
+Frontend
+El frontend de RemindMe está estructurado en diferentes páginas y componentes esenciales para la experiencia del usuario, como la gestión de tareas y configuraciones de usuario.
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
+Backend
+El backend está organizado en microservicios para gestionar la autenticación y funcionalidades de las tareas de manera eficiente.
 
-The page will reload when you make changes.\
-You may also see any lint errors in the console.
+Pruebas
+La funcionalidad de RemindMe ha sido probada para asegurar su correcto funcionamiento y mejorar la organización personal de los usuarios.
 
-### `npm test`
+Despliegue
+La infraestructura de RemindMe está configurada en Render para facilitar el despliegue y manejo de la aplicación en la nube.
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+Manual de Usuario
+Incluye instrucciones detalladas sobre cómo crear tareas, configurar preferencias y aprovechar las funcionalidades de seguridad.
 
-### `npm run build`
+Análisis Comparativo
+Ventajas sobre Alternativas
+RemindMe ofrece recordatorios precisos, seguridad MFA integrada, personalización total y portabilidad sin depender de otras plataformas.
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+Limitaciones
+Aunque ofrece ventajas significativas, RemindMe no se integra con sistemas de gestión de aprendizaje (LMS) y requiere un registro separado.
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+Roadmap Futuro
+Se planea integrar con calendarios, desarrollar una aplicación móvil nativa y mejorar el rendimiento y la experiencia de usuario.
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+Conclusiones
+RemindMe es una solución robusta para mejorar la organización personal, destacando por su autonomía, notificaciones exactas y seguridad mejorada.
 
-### `npm run eject`
+Repositorios y Enlaces
+Frontend en GitHub
 
-**Note: this is a one-way operation. Once you `eject`, you can't go back!**
+Backend en GitHub
 
-If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
-
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
-
-You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
-
-## Learn More
-
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
-
-To learn React, check out the [React documentation](https://reactjs.org/).
-
-### Code Splitting
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
-
-### Analyzing the Bundle Size
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
-
-### Making a Progressive Web App
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
-
-### Advanced Configuration
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
-
-### Deployment
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
-
-### `npm run build` fails to minify
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+Aplicativo en Render
