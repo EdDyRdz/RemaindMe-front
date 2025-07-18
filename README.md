@@ -59,14 +59,14 @@ Aunque ofrece ventajas significativas, RemindMe:
 ---
 
 ## 📸 Capturas de Pantalla 
-(https://imgur.com/enZsEtM)
-![Login](Demo/Home.png)
-![Modal](Demo/Login.png)
+![Home](Demo/Home.png)
+![Login](Demo/Login.png)
+![Modal](Demo/Modal.png)
 ![Recordada](Demo/Recordada.png)
 ![Registro](Demo/Registro.png)
 ![Tarea](Demo/Tarea.png)
 ![authQR](Demo/authQR.png)
-(Demo/codigo.png)
+![Codigo](Demo/codigo.png)
 ---
 
 ## Roadmap Futuro
