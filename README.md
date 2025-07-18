@@ -66,7 +66,7 @@ Aunque ofrece ventajas significativas, RemindMe:
 ![Registro](Demo/Registro.png)
 ![Tarea](Demo/Tarea.png)
 ![authQR](Demo/authQR.png)
-![Codigo](Demo/codigo.png)
+![Codigo](Demo/codigo.jpg)
 ---
 
 ## Roadmap Futuro
